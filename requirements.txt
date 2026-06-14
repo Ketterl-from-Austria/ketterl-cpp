@@ -1,0 +1,2 @@
+xknx>=2.5
+websockets>=12.0
