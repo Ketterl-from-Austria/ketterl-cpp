@@ -1,0 +1,12 @@
+# Generierte Dateien – nicht ins Repo
+../cpp_villa_real.html
+*.pyc
+__pycache__/
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Temporär
+*.log
+*.tmp
