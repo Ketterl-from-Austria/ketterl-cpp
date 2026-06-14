@@ -35,22 +35,32 @@ xknx_inst: XKNX = None
 
 async def knx_start():
     global xknx_inst
-    xknx_inst = XKNX(connection_config=ConnectionConfig(
-        connection_type=ConnectionType.TUNNELING,
-        gateway_ip=KNX_IP,
-        gateway_port=KNX_PORT,
-    ))
-    await xknx_inst.start()
-    log.info(f"KNX verbunden: {KNX_IP}:{KNX_PORT}")
+    try:
+        xknx_inst = XKNX(connection_config=ConnectionConfig(
+            connection_type=ConnectionType.TUNNELING,
+            gateway_ip=KNX_IP,
+            gateway_port=KNX_PORT,
+        ))
+        await xknx_inst.start()
+        log.info(f"KNX verbunden: {KNX_IP}:{KNX_PORT}")
+    except Exception as e:
+        log.warning(f"KNX nicht erreichbar ({e}) – nur WebSocket-Relay aktiv")
+        xknx_inst = None
 
 
 async def knx_write(ga: str, value: bool):
-    t = Telegram(
-        destination_address=GroupAddress(ga),
-        payload=GroupValueWrite(DPTBinary(1 if value else 0)),
-    )
-    await xknx_inst.telegrams.put(t)
-    log.info(f"KNX write  {ga} = {'EIN' if value else 'AUS'}")
+    if xknx_inst is None:
+        log.warning(f"KNX nicht verbunden – sende nicht: {ga}={value}")
+        return
+    try:
+        t = Telegram(
+            destination_address=GroupAddress(ga),
+            payload=GroupValueWrite(DPTBinary(1 if value else 0)),
+        )
+        await xknx_inst.telegrams.put(t)
+        log.info(f"KNX write  {ga} = {'EIN' if value else 'AUS'}")
+    except Exception as e:
+        log.error(f"KNX write Fehler {ga}: {e}")
 
 
 async def broadcast(msg: str, skip=None):
