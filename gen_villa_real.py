@@ -830,16 +830,12 @@ function renderRoom(room) {{
   }}
   /* Sonderinhalt je Raum */
   if (room.id === 'AUSSEN_Schröten') {{
-    html += `<div class="yt-wrap" style="position:relative;cursor:pointer;"
-        onclick="window.open('https://www.youtube.com/watch?v=3yMIk9u--lo','_blank')">
-      <img src="https://img.youtube.com/vi/3yMIk9u--lo/hqdefault.jpg"
-        style="width:100%;height:100%;object-fit:cover;display:block;" alt="Schildkröten">
-      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
-        <div style="width:56px;height:56px;border-radius:50%;background:rgba(255,0,0,.85);
-          display:flex;align-items:center;justify-content:center;">
-          <span style="color:#fff;font-size:22px;margin-left:4px;">▶</span>
-        </div>
-      </div>
+    html += `<div class="yt-wrap">
+      <iframe
+        src="https://www.youtube-nocookie.com/embed/3yMIk9u--lo?rel=0&modestbranding=1"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowfullscreen>
+      </iframe>
     </div>`;
   }}
   return `${{renderLeftCol(room)}}${{renderGebaeudeTabs(room)}}
