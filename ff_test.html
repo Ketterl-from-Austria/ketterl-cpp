@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>FF-Test – KNX Interface</title>
+<style>
+  :root {
+    --paper: #f5f0e8;
+    --ink:   #1a1a1a;
+    --ink-light: #888;
+    --yellow: #f5c842;
+    --red:   #c0392b;
+    --green: #27ae60;
+    --blue-line: #c8d8e8;
+    --font: 'Patrick Hand', 'Caveat', cursive;
+  }
+  @import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--paper);
+    font-family: var(--font);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px;
+    /* Liniertes Papier */
+    background-image: repeating-linear-gradient(
+      transparent, transparent 27px,
+      var(--blue-line) 27px, var(--blue-line) 28px
+    );
+  }
+
+  h1 {
+    font-size: 2rem;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .subtitle {
+    font-size: 1rem;
+    color: var(--ink-light);
+    margin-bottom: 24px;
+  }
+
+  /* Status-Pill */
+  #status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    border-radius: 20px;
+    border: 2px solid var(--ink);
+    background: white;
+    font-size: 1rem;
+    margin-bottom: 32px;
+    transition: background .3s;
+  }
+  #status.connected    { background: #d4edda; border-color: var(--green); }
+  #status.disconnected { background: #f8d7da; border-color: var(--red); }
+  #status-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #aaa;
+    transition: background .3s;
+  }
+  .connected    #status-dot { background: var(--green); }
+  .disconnected #status-dot { background: var(--red); }
+
+  /* Cards */
+  .card {
+    background: white;
+    border: 2px solid var(--ink);
+    border-radius: 6px;
+    width: 100%;
+    max-width: 380px;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .card-head {
+    padding: 10px 16px;
+    border-bottom: 1.5px solid var(--ink);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .card-title { font-size: 1.3rem; color: var(--ink); }
+  .card-ga    { font-size: .8rem;  color: var(--ink-light); }
+  .card-body  { padding: 16px; }
+
+  /* Toggle-Checkbox (wie in der Haupt-App) */
+  .ctrl-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  .zetterl-cb {
+    width: 28px; height: 28px;
+    border: 2.5px solid var(--ink);
+    border-radius: 3px;
+    background: white;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: background .15s;
+    font-size: 1.1rem;
+    user-select: none;
+  }
+  .zetterl-cb.on { background: var(--yellow); }
+  .ctrl-label { font-size: 1.1rem; color: var(--ink); }
+
+  /* Türöffner – Momenttaster */
+  .btn-door {
+    width: 100%;
+    padding: 14px;
+    background: white;
+    border: 2.5px solid var(--ink);
+    border-radius: 4px;
+    font-family: var(--font);
+    font-size: 1.3rem;
+    cursor: pointer;
+    transition: background .12s;
+  }
+  .btn-door:active, .btn-door.pressing { background: var(--yellow); }
+
+  /* Log */
+  #log {
+    width: 100%;
+    max-width: 380px;
+    background: #111;
+    color: #0f0;
+    font-family: monospace;
+    font-size: .78rem;
+    padding: 10px;
+    border-radius: 4px;
+    height: 140px;
+    overflow-y: auto;
+    margin-top: 8px;
+  }
+  #log .entry { padding: 1px 0; border-bottom: 1px solid #222; }
+  #log .err   { color: #f66; }
+  #log .ok    { color: #0f0; }
+  #log .info  { color: #88f; }
+
+  .note {
+    font-size: .85rem;
+    color: var(--ink-light);
+    text-align: center;
+    margin-top: 24px;
+    max-width: 380px;
+  }
+</style>
+</head>
+<body>
+
+<h1>FF-Test</h1>
+<p class="subtitle">KNX Interface 192.168.107.175 – Testseite</p>
+
+<div id="status" class="disconnected">
+  <span id="status-dot"></span>
+  <span id="status-text">Verbinde…</span>
+</div>
+
+<!-- Türöffner -->
+<div class="card">
+  <div class="card-head">
+    <span class="card-title">Türöffner</span>
+    <span class="card-ga">GA 7/7/9</span>
+  </div>
+  <div class="card-body">
+    <button class="btn-door" id="btn-door"
+      onmousedown="doorPress()" onmouseup="doorRelease()"
+      ontouchstart="doorPress()" ontouchend="doorRelease()">
+      🔓 Öffnen (halten)
+    </button>
+    <div style="margin-top:8px;font-size:.85rem;color:var(--ink-light)">
+      Impulstaster – solange gedrückt halten wie Tür offen soll
+    </div>
+  </div>
+</div>
+
+<!-- Licht Stehtisch -->
+<div class="card">
+  <div class="card-head">
+    <span class="card-title">Licht Stehtisch</span>
+    <span class="card-ga">GA 7/1/230</span>
+  </div>
+  <div class="card-body">
+    <div class="ctrl-row">
+      <div class="zetterl-cb" id="cb-licht" onclick="toggleLicht()"></div>
+      <span class="ctrl-label" id="lbl-licht">AUS</span>
+    </div>
+  </div>
+</div>
+
+<!-- Log -->
+<div id="log"><div class="entry info">[init] Seite geladen</div></div>
+
+<p class="note">⚠️ Testseite – nach erfolgreichem Test wieder entfernen</p>
+
+<script>
+// ── Konfiguration ────────────────────────────────────────────────────────
+const WS_URL = `ws://${location.hostname}:8765`;
+const GA_TUER  = "7/7/9";
+const GA_LICHT = "7/1/230";
+// ─────────────────────────────────────────────────────────────────────────
+
+let ws = null;
+let lichtState = false;
+let doorTimer  = null;
+
+function log(msg, cls = "ok") {
+  const el = document.getElementById("log");
+  const ts  = new Date().toTimeString().slice(0,8);
+  const div = document.createElement("div");
+  div.className = `entry ${cls}`;
+  div.textContent = `[${ts}] ${msg}`;
+  el.prepend(div);
+  // max 50 Einträge
+  while (el.children.length > 50) el.removeChild(el.lastChild);
+}
+
+function setStatus(connected) {
+  const el = document.getElementById("status");
+  el.className = connected ? "connected" : "disconnected";
+  document.getElementById("status-text").textContent =
+    connected ? "KNX Bridge verbunden" : "Bridge getrennt – neu verbinden…";
+}
+
+function send(ga, value) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    log("NICHT verbunden – kann nicht senden!", "err");
+    return;
+  }
+  ws.send(JSON.stringify({ ga, value }));
+  log(`→ ${ga} = ${value ? "EIN" : "AUS"}`);
+}
+
+// ── Türöffner ─────────────────────────────────────────────────────────────
+function doorPress() {
+  document.getElementById("btn-door").classList.add("pressing");
+  send(GA_TUER, true);
+}
+function doorRelease() {
+  document.getElementById("btn-door").classList.remove("pressing");
+  send(GA_TUER, false);
+}
+
+// ── Licht Stehtisch ───────────────────────────────────────────────────────
+function toggleLicht() {
+  lichtState = !lichtState;
+  updateLicht();
+  send(GA_LICHT, lichtState);
+}
+
+function updateLicht(val) {
+  if (val !== undefined) lichtState = val;
+  const cb  = document.getElementById("cb-licht");
+  const lbl = document.getElementById("lbl-licht");
+  cb.textContent = lichtState ? "✕" : "";
+  cb.className   = "zetterl-cb" + (lichtState ? " on" : "");
+  lbl.textContent = lichtState ? "EIN" : "AUS";
+}
+
+// ── WebSocket ─────────────────────────────────────────────────────────────
+function connect() {
+  log(`Verbinde zu ${WS_URL}…`, "info");
+  ws = new WebSocket(WS_URL);
+
+  ws.onopen = () => {
+    setStatus(true);
+    log("WebSocket verbunden ✓", "ok");
+  };
+
+  ws.onmessage = (e) => {
+    const d = JSON.parse(e.data);
+    if (d.error) { log("Fehler vom Bridge: " + d.error, "err"); return; }
+    log(`← ${d.ga} = ${d.value ? "EIN" : "AUS"}`, "info");
+    if (d.ga === GA_LICHT) updateLicht(d.value);
+  };
+
+  ws.onclose = () => {
+    setStatus(false);
+    log("Verbindung getrennt – nochmal in 3s…", "err");
+    setTimeout(connect, 3000);
+  };
+
+  ws.onerror = (e) => {
+    log("WebSocket-Fehler", "err");
+  };
+}
+
+connect();
+</script>
+</body>
+</html>

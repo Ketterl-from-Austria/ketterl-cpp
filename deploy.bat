@@ -15,7 +15,7 @@ git status --short
 
 echo.
 echo [2/3] Alle Änderungen committen...
-git add knx_config_cpp.json gen_villa_real.py rebuild.sh overrides.json 2>nul
+git add knx_config_cpp.json gen_villa_real.py rebuild.sh overrides.json knx_bridge.py ff_test.html 2>nul
 git commit -m "%MSG%"
 if errorlevel 1 (
     echo Nichts zu committen oder Fehler.
