@@ -21,9 +21,12 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 # ── Konfiguration ────────────────────────────────────────────────────────────
-KNX_IP   = "192.168.107.175"
-KNX_PORT = 3671
-WS_PORT  = 8765
+# Konfiguration aus bridge_config.json (neben diesem Script)
+import pathlib as _pl, json as _json
+_cfg = _json.loads((_pl.Path(__file__).parent / "bridge_config.json").read_text())
+KNX_IP   = _cfg.get("knx_gateway_ip",   "10.100.100.6")
+KNX_PORT = _cfg.get("knx_gateway_port", 3671)
+WS_PORT  = _cfg.get("ws_port",          8765)
 # ─────────────────────────────────────────────────────────────────────────────
 
 clients: set = set()

@@ -1,0 +1,5 @@
+{
+  "knx_gateway_ip": "10.100.100.6",
+  "knx_gateway_port": 3671,
+  "ws_port": 8765
+}

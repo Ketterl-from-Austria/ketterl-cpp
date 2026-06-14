@@ -650,7 +650,7 @@ body.style-dashboard .nav-style-btn.active {{ background: #1a4a6b; border-color:
       <button class="nav-btn btn-prev" onclick="historyNav('back')">◀</button>
       <button class="nav-btn btn-next" onclick="historyNav('fwd')">▶</button>
     </div>
-    <div class="page-dots" id="dots"></div>
+    <div style="display:flex;align-items:center;gap:6px;"><div class="page-dots" id="dots"></div><div id="knx-dot" title="KNX getrennt" style="width:8px;height:8px;border-radius:50%;background:#e74c3c;flex-shrink:0;margin-bottom:2px;transition:background .4s;"></div></div>
   </div>
 </div>
 
@@ -678,6 +678,50 @@ Object.entries(DEVICES).forEach(([id, dev]) => {{
   if (dev.type === 'dimmer')  STATE[id] = dev.value ?? 50;
   if (dev.type === 'display') STATE[id] = dev.value ?? '—';
 }});
+
+/* ── KNX WebSocket ── */
+const KNX_WS_URL = `ws://${{location.hostname}}:8765`;
+let knxWs = null;
+
+function knxConnect() {{
+  knxWs = new WebSocket(KNX_WS_URL);
+  knxWs.onopen  = () => {{ updateKnxDot(true);  }};
+  knxWs.onclose = () => {{ updateKnxDot(false); setTimeout(knxConnect, 3000); }};
+  knxWs.onmessage = (e) => {{
+    const d = JSON.parse(e.data);
+    Object.entries(DEVICES).forEach(([devId, dev]) => {{
+      if (dev.knx !== d.ga) return;
+      if (dev.type === 'switch') {{
+        STATE[devId] = Boolean(d.value);
+        document.querySelectorAll(`.ctrl[data-devid="${{devId}}"]`).forEach(el => {{
+          el.classList.toggle('on', STATE[devId]);
+        }});
+        playPaper(0.3);
+      }} else if (dev.type === 'dimmer') {{
+        STATE[devId] = +d.value;
+        document.querySelectorAll(`input[data-devid="${{devId}}"]`).forEach(el => {{
+          el.value = d.value;
+          const row = el.closest('.dimmer-row');
+          if (row) {{ const dv = row.querySelector('.dimmer-val'); if (dv) dv.textContent = d.value + '%'; }}
+        }});
+      }}
+    }});
+  }};
+  knxWs.onerror = () => {{}};
+}}
+
+function knxSend(ga, value) {{
+  if (ga && ga !== '—' && knxWs?.readyState === WebSocket.OPEN) {{
+    knxWs.send(JSON.stringify({{ga, value}}));
+  }}
+}}
+
+function updateKnxDot(ok) {{
+  const dot = document.getElementById('knx-dot');
+  if (dot) {{ dot.style.background = ok ? '#27ae60' : '#e74c3c'; dot.title = ok ? 'KNX verbunden' : 'KNX getrennt'; }}
+}}
+
+knxConnect();
 
 function resolveCtrl(c) {{
   const dev = c.device ? DEVICES[c.device] : null;
@@ -815,6 +859,7 @@ function attachRoomEvents(el, room) {{
       const devId=ctrl.dataset.devid;
       if (!devId||DEVICES[devId]?.type!=='switch') return;
       STATE[devId]=!STATE[devId]; ctrl.classList.toggle('on',STATE[devId]);
+      knxSend(DEVICES[devId]?.knx, STATE[devId]);
     }});
   }});
   el.querySelectorAll('input[type=range]').forEach(inp => {{
@@ -822,6 +867,7 @@ function attachRoomEvents(el, room) {{
       const devId=inp.dataset.devid; if(!devId)return;
       STATE[devId]=+inp.value;
       inp.closest('.dimmer-row').querySelector('[data-devid]').textContent=inp.value+'%';
+      knxSend(DEVICES[devId]?.knx, +inp.value);
     }});
   }});
   attachDoorEvents(el);
