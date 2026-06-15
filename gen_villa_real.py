@@ -832,7 +832,7 @@ function renderRoom(room) {{
   if (room.id === 'AUSSEN_Schröten') {{
     html += `<div class="yt-wrap">
       <iframe
-        src="https://www.youtube-nocookie.com/embed/3yMIk9u--lo?rel=0&modestbranding=1"
+        src="https://www.youtube-nocookie.com/embed/-RSpqCKN9dA?rel=0&modestbranding=1"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
         allowfullscreen>
       </iframe>
